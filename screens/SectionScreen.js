@@ -1,14 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-  Text,
-  WebView,
-  StyleSheet
-} from "react-native";
+import { TouchableOpacity, StatusBar, ScrollView, WebView } from "react-native";
 
 class SectionScreen extends React.Component {
   static navigationOptions = {

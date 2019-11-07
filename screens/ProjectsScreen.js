@@ -2,7 +2,20 @@ import React from "react";
 import styled from "styled-components";
 import Project from "../components/Project";
 import { PanResponder, Animated } from "react-native";
+import { connect } from "react-redux";
 
+function mapStateToProps(state) {
+  return { action: state.action };
+}
+
+function getNextIndex(index) {
+  var nextIndex = index + 1;
+  if (nextIndex > projects.length - 1) {
+    return 0;
+  }
+
+  return nextIndex;
+}
 class ProjectsScreen extends React.Component {
   static navigationOptions = {
     header: null
@@ -11,27 +24,56 @@ class ProjectsScreen extends React.Component {
   state = {
     pan: new Animated.ValueXY(),
     scale: new Animated.Value(0.9),
-    translateY: new Animated.Value(44)
+    translateY: new Animated.Value(44),
+    thirdScale: new Animated.Value(0.8),
+    thirdTranslateY: new Animated.Value(-50),
+    index: 0,
+    opacity: new Animated.Value(0)
   };
 
   componentWillMount() {
     this._panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (event, gestureState) => {
+        if (gestureState.dx === 0 && gestureState.dy === 0) {
+          return false;
+        } else {
+          if (this.props.action === "openCard") {
+            return false;
+          } else {
+            return true;
+          }
+        }
+      },
+
       onPanResponderGrant: () => {
         Animated.spring(this.state.scale, { toValue: 1 }).start();
         Animated.spring(this.state.translateY, { toValue: 0 }).start();
+
+        Animated.spring(this.state.thirdScale, { toValue: 0.9 }).start();
+        Animated.spring(this.state.thirdTranslateY, { toValue: 44 }).start();
+        Animated.timing(this.state.opacity, { toValue: 1 }).start();
       },
-      onMoveShouldSetPanResponder: () => true,
+
       onPanResponderMove: Animated.event([
         null,
         { dx: this.state.pan.x, dy: this.state.pan.y }
       ]),
+
       onPanResponderRelease: () => {
         const positionY = this.state.pan.y.__getValue();
+        Animated.timing(this.state.opacity, { toValue: 0 }).start();
 
         if (positionY > 200) {
           Animated.timing(this.state.pan, {
-            toValue: { x: this.state.pan.x, y: 1000 }
-          }).start();
+            toValue: { x: 0, y: 1000 }
+          }).start(() => {
+            this.state.pan.setValue({ x: 0, y: 0 });
+            this.state.scale.setValue(0.9);
+            this.state.translateY.setValue(44);
+            this.state.thirdScale.setValue(0.8);
+            this.state.thirdTranslateY.setValue(-50);
+            this.setState({ index: getNextIndex(this.state.index) });
+          });
         } else {
           Animated.spring(this.state.pan, {
             toValue: { x: 0, y: 0 }
@@ -39,6 +81,9 @@ class ProjectsScreen extends React.Component {
 
           Animated.spring(this.state.scale, { toValue: 0.9 }).start();
           Animated.spring(this.state.translateY, { toValue: 44 }).start();
+
+          Animated.spring(this.state.thirdScale, { toValue: 0.8 }).start();
+          Animated.spring(this.state.thirdTranslateY, { toValue: -50 }).start();
         }
       }
     });
@@ -47,6 +92,7 @@ class ProjectsScreen extends React.Component {
   render() {
     return (
       <Container>
+        <AnimatedMask style={{ opacity: this.state.opacity }} />
         <Animated.View
           style={{
             transform: [
@@ -57,12 +103,11 @@ class ProjectsScreen extends React.Component {
           {...this._panResponder.panHandlers}
         >
           <Project
-            title="Things fall apart"
-            image={require("../assets/background14.jpg")}
-            author="chinua achebe"
-            text="Things Fall Apart is a novel written by Nigerian author Chinua Achebe. 
-            Published in 1958, its story chronicles pre-colonial life in the south-eastern 
-            part of Nigeria."
+            title={projects[this.state.index].title}
+            image={projects[this.state.index].image}
+            author={projects[this.state.index].author}
+            text={projects[this.state.index].text}
+            canOpen={true}
           />
         </Animated.View>
         <Animated.View
@@ -81,14 +126,54 @@ class ProjectsScreen extends React.Component {
             ]
           }}
         >
-          <Project />
+          <Project
+            title={projects[getNextIndex(this.state.index)].title}
+            image={projects[getNextIndex(this.state.index)].image}
+            author={projects[getNextIndex(this.state.index)].author}
+            text={projects[getNextIndex(this.state.index)].text}
+          />
+        </Animated.View>
+        <Animated.View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            zIndex: -3,
+            width: "100%",
+            height: "100%",
+            justifyContent: "center",
+            alignItems: "center",
+            transform: [
+              { scale: this.state.thirdScale },
+              { translateY: this.state.thirdTranslateY }
+            ]
+          }}
+        >
+          <Project
+            title={projects[getNextIndex(this.state.index + 1)].title}
+            image={projects[getNextIndex(this.state.index + 1)].image}
+            author={projects[getNextIndex(this.state.index + 1)].author}
+            text={projects[getNextIndex(this.state.index + 1)].text}
+          />
         </Animated.View>
       </Container>
     );
   }
 }
 
-export default ProjectsScreen;
+export default connect(mapStateToProps)(ProjectsScreen);
+
+const Mask = styled.View`
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: -3;
+`;
+
+const AnimatedMask = Animated.createAnimatedComponent(Mask);
 
 const Container = styled.View`
   flex: 1;
@@ -97,4 +182,33 @@ const Container = styled.View`
   background: #f0f3f5;
 `;
 
-const Text = styled.Text``;
+const projects = [
+  {
+    title: "Things fall apart",
+    image: require("../assets/background14.jpg"),
+    author: "chinua achebe",
+    text:
+      "Things Fall Apart is a novel written by Nigerian author Chinua Achebe. Published in 1958, its story chronicles pre-colonial life in the south-eastern part of Nigeria and the arrival of the Europeans during the late nineteenth century. It is seen as the archetypal modern African novel in English, one of the first to receive global critical acclaim. It is a staple book in schools throughout Africa and is widely read and studied in English-speaking countries around the world. In 1962, Achebe's debut novel was first published in the UK by William Heinemann Ltd. Things Fall Apart was the first work published in Heinemann's African Writers Series."
+  },
+  {
+    title: "Price Tag",
+    image: require("../assets/background5.jpg"),
+    author: "Liu Yi",
+    text:
+      "Thanks to Design+Code, I improved my design skill and learned to do animations for my app Price Tag, a top news app in China."
+  },
+  {
+    title: "The DM App - Ananoumous Chat",
+    image: require("../assets/background6.jpg"),
+    author: "Chad Goodman",
+    text:
+      "Design+Code was the first resource I used when breaking into software. I went from knowing nothing about design or code to building a production ready app from scratch. "
+  },
+  {
+    title: "Nikhiljay",
+    image: require("../assets/background7.jpg"),
+    author: "Nikhil D'Souza",
+    text:
+      "Recently finished the React course by @Mengto, and I 10/10 would recommend. I already rewrote my personal website in @reactjs and I'm very excited with it."
+  }
+];

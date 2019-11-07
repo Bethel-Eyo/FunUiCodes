@@ -21,6 +21,7 @@ import styled from "styled-components";
 import Avatar from "../components/Avatar";
 import gql from "graphql-tag";
 import { Query } from "react-apollo";
+import ModalLogin from "../components/ModalLogin";
 
 const CardsQuery = gql`
   {
@@ -65,6 +66,11 @@ function mapDispatchToProps(dispatch) {
     openMenu: () => {
       dispatch({
         type: "OPEN_MENU"
+      });
+    },
+    openLogin: () => {
+      dispatch({
+        type: "OPEN_LOGIN"
       });
     }
   };
@@ -133,7 +139,7 @@ class HomeScreen extends React.Component {
             <ScrollView>
               <View style={styles.titleBar}>
                 <TouchableOpacity
-                  onPress={this.props.openMenu}
+                  onPress={this.props.openLogin}
                   style={{ position: "absolute", top: 0, left: 20 }}
                 >
                   <Avatar />
@@ -206,6 +212,7 @@ class HomeScreen extends React.Component {
             </ScrollView>
           </SafeAreaView>
         </AnimatedContainer>
+        <ModalLogin />
       </RootView>
     );
   }
