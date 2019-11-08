@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import Card from "../components/Card";
 import Course from "../components/Course";
-import { NotificationIcon } from "../components/Icons";
+import NotificationButton from "../components/NotificationButton";
 import { Logo } from "../components/Logo";
 import Menu from "../components/Menu";
 import { connect } from "react-redux";
@@ -22,6 +22,7 @@ import Avatar from "../components/Avatar";
 import gql from "graphql-tag";
 import { Query } from "react-apollo";
 import ModalLogin from "../components/ModalLogin";
+import Notifications from "../components/Notifications";
 
 const CardsQuery = gql`
   {
@@ -71,6 +72,11 @@ function mapDispatchToProps(dispatch) {
     openLogin: () => {
       dispatch({
         type: "OPEN_LOGIN"
+      });
+    },
+    openNotif: () => {
+      dispatch({
+        type: "OPEN_NOTIF"
       });
     }
   };
@@ -125,10 +131,20 @@ class HomeScreen extends React.Component {
       StatusBar.setBarStyle("dark-content", true);
     }
   };
+
+  handleAvatarClick = () => {
+    if (this.props.name !== "Unknown User") {
+      this.props.openMenu();
+    } else {
+      this.props.openLogin();
+    }
+  };
+
   render() {
     return (
       <RootView>
         <Menu />
+        <Notifications />
         <AnimatedContainer
           style={{
             transform: [{ scale: this.state.scale }],
@@ -139,14 +155,19 @@ class HomeScreen extends React.Component {
             <ScrollView>
               <View style={styles.titleBar}>
                 <TouchableOpacity
-                  onPress={this.props.openLogin}
+                  onPress={this.handleAvatarClick}
                   style={{ position: "absolute", top: 0, left: 20 }}
                 >
                   <Avatar />
                 </TouchableOpacity>
                 <Text style={styles.title}>Hello Citiworks.ng</Text>
                 <Text style={styles.name}>{this.props.name}</Text>
-                <NotificationIcon style={styles.notificationIcon} />
+                <TouchableOpacity
+                  onPress={() => this.props.openNotif()}
+                  style={{ position: "absolute", right: 20, top: 5 }}
+                >
+                  <NotificationButton />
+                </TouchableOpacity>
               </View>
               <ScrollView
                 style={styles.logo}
@@ -167,7 +188,7 @@ class HomeScreen extends React.Component {
                   {({ loading, error, data }) => {
                     if (loading) return <Message>Loading...</Message>;
                     if (error) return <Message>Error...</Message>;
-                    console.log(data.cardsCollection.items);
+                    // console.log(data.cardsCollection.items);
                     return (
                       <CardsContainer>
                         {data.cardsCollection.items.map((card, index) => (

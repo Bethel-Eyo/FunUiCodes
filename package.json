@@ -10,6 +10,7 @@
   "dependencies": {
     "apollo-boost": "^0.4.4",
     "expo": "^35.0.0",
+    "expo-av": "^7.0.1",
     "expo-blur": "^7.0.0",
     "expo-linear-gradient": "^7.0.1",
     "firebase": "^7.2.3",

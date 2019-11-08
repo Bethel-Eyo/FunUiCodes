@@ -6,12 +6,15 @@ import {
   Keyboard,
   Animated,
   Dimensions,
-  Alert
+  Alert,
+  AsyncStorage
 } from "react-native";
 import { BlurView } from "expo-blur";
 import Success from "./Success";
 import Loading from "./Loading";
 import { connect } from "react-redux";
+import firebase from "./Firebase";
+import { saveState } from "./AsyncStore";
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -25,7 +28,18 @@ function mapDispatchToProps(dispatch) {
       dispatch({
         type: "CLOSE_LOGIN"
       });
-    }
+    },
+    updateName: name => {
+      dispatch({
+        type: "UPDATE_NAME",
+        name
+      });
+    },
+    updateAvatar: avatar =>
+      dispatch({
+        type: "UPDATE_AVATAR",
+        avatar
+      })
   };
 }
 
@@ -41,6 +55,10 @@ class ModalLogin extends React.Component {
     scale: new Animated.Value(1.3),
     translateY: new Animated.Value(0)
   };
+
+  componentDidMount() {
+    this.retrieveName();
+  }
 
   componentDidUpdate() {
     if (this.props.action === "openLogin") {
@@ -73,20 +91,75 @@ class ModalLogin extends React.Component {
     }
   }
 
+  storeName = async name => {
+    try {
+      await AsyncStorage.setItem("name", name);
+    } catch (error) {}
+  };
+
+  retrieveName = async () => {
+    try {
+      const name = await AsyncStorage.getItem("name");
+      if (name !== null) {
+        console.log(name);
+        this.props.updateName(name);
+      }
+    } catch (error) {}
+  };
+
   onLoginPressed = () => {
     this.setState({ isLoading: true });
 
-    setTimeout(() => {
-      this.setState({ isLoading: false });
-      this.setState({ isSuccessful: true });
+    const email = this.state.email;
+    const password = this.state.password;
 
-      Alert.alert("Congrats", "You have logged in Successfully");
-      setTimeout(() => {
-        this.props.closeLogin();
-        this.setState({ isSuccessful: false });
-      }, 1000);
-    }, 2000);
+    firebase
+      .auth()
+      .signInWithEmailAndPassword(email, password)
+      .catch(function(error) {
+        Alert.alert("Error", error.message);
+      })
+      .then(response => {
+        // console.log(response);
+
+        this.setState({ isLoading: false });
+
+        if (response) {
+          //console.log(response);
+          this.setState({ isSuccessful: true });
+
+          setTimeout(() => {
+            this.setState({ isLoading: false });
+            this.setState({ isSuccessful: true });
+
+            Alert.alert("Congrats", "You have logged in Successfully");
+            //this.storeName(response.user.email);
+            this.fetchUser();
+            this.props.updateName(response.user.email);
+            setTimeout(() => {
+              this.props.closeLogin();
+              this.setState({ isSuccessful: false });
+            }, 1000);
+          }, 2000);
+        }
+      });
   };
+
+  fetchUser() {
+    fetch("https://uifaces.co/api", {
+      headers: new Headers({
+        "X-API-KEY": "22ca8ace85af5834e31c3deb4a9bf6 "
+      })
+    })
+      .then(response => response.json())
+      .then(response => {
+        const name = response[0].name;
+        const avatar = response[0].photo;
+        saveState({ name, avatar });
+        this.props.updateName(name);
+        this.props.updateAvatar(avatar);
+      });
+  }
 
   focusEmail = () => {
     this.setState({
@@ -131,12 +204,14 @@ class ModalLogin extends React.Component {
             onChangeText={email => this.setState({ email })}
             placeholder="Email"
             keyboardType="email-address"
+            autoCapitalize="none"
             onFocus={this.focusEmail}
           />
           <InputField
             onChangeText={password => this.setState({ password })}
             placeholder="Password"
             secureTextEntry={true}
+            autoCapitalize="none"
             onFocus={this.focusPassword}
           />
           <IconEmail source={this.state.iconEmail} />
